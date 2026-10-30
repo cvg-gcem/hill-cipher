@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Interactive Hill Cipher encryption and decryption dashboard supporting 2x2, 3x3, 4x4 and 5x5 key matrices. All calculations run live in the browser." />
+<title>Hill Cipher Cryptography Dashboard</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="bg-effects" aria-hidden="true">
+  <div class="glow glow-a"></div>
+  <div class="glow glow-b"></div>
+  <div class="grid-overlay"></div>
+</div>
+
+<!-- ================= HEADER ================= -->
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">K<sub>n</sub></div>
+    <div class="brand-text">
+      <h1>Hill Cipher <span class="accent">Cryptography Dashboard</span></h1>
+      <p>Matrix-Based Encryption &amp; Decryption · every calculation runs live in your browser</p>
+    </div>
+  </div>
+  <div class="topbar-badges">
+    <span class="chip">2×2 · 3×3 · 4×4 · 5×5</span>
+    <span class="chip">mod 26</span>
+    <span class="chip">vanilla JS</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ================= DASHBOARD STATISTICS ================= -->
+  <section class="stats" aria-label="Dashboard statistics">
+    <div class="stat">
+      <span class="stat-label">Matrix Size</span>
+      <span class="stat-value" id="statSize">2×2</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Determinant</span>
+      <span class="stat-value mono" id="statDet">—</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Key Status</span>
+      <span class="stat-value"><span class="pill neutral" id="statKey">—</span></span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Plaintext Length</span>
+      <span class="stat-value mono" id="statPlain">—</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Ciphertext Length</span>
+      <span class="stat-value mono" id="statCipher">—</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Operation</span>
+      <span class="stat-value" id="statOp">—</span>
+    </div>
+  </section>
+
+  <!-- ================= CONTROLS ================= -->
+  <section class="card controls">
+    <div class="control">
+      <label for="matrixSize">Select Matrix Size</label>
+      <div class="select-wrap">
+        <select id="matrixSize">
+          <option value="2">2 × 2</option>
+          <option value="3">3 × 3</option>
+          <option value="4">4 × 4</option>
+          <option value="5">5 × 5</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="control grow">
+      <span class="control-label">Example Buttons</span>
+      <div class="btn-row">
+        <button type="button" class="btn ghost" data-example="2">2×2 Example</button>
+        <button type="button" class="btn ghost" data-example="3">3×3 Example</button>
+        <button type="button" class="btn ghost" data-example="4">4×4 Example</button>
+        <button type="button" class="btn ghost" data-example="5">5×5 Example</button>
+      </div>
+    </div>
+
+    <button type="button" class="btn warn" id="resetBtn">↺ Reset</button>
+  </section>
+
+  <!-- ================= KEY MATRIX ================= -->
+  <section class="card" id="keyPanel">
+    <div class="card-head">
+      <h2><span class="idx">01</span> Key Matrix</h2>
+      <p class="hint">Every cell is editable · values are interpreted modulo 26</p>
+    </div>
+
+    <div class="key-layout">
+      <div class="matrix-panel">
+        <div class="brk" id="keyMatrix" role="group" aria-label="Key matrix editor"></div>
+        <div class="matrix-caption">K — <span id="keyDims">2 × 2</span> key matrix</div>
+      </div>
+
+      <div class="analysis-panel">
+        <div class="analysis-row"><span>det(K)</span><b class="mono" id="detValue">—</b></div>
+        <div class="analysis-row"><span>det(K) mod 26</span><b class="mono" id="detModValue">—</b></div>
+        <div class="analysis-row"><span>gcd( det(K), 26 )</span><b class="mono" id="gcdValue">—</b></div>
+        <div class="analysis-row"><span>Key Status</span><b id="keyStatusText">—</b></div>
+
+        <p class="formula">K is invertible mod 26 ⟺ gcd( det(K), 26 ) = 1</p>
+
+        <div class="inverse-box" id="inverseBox">
+          <div class="inv-line"><span>Determinant:</span><b class="mono">—</b></div>
+          <div class="inv-line"><span>det(K) mod 26:</span><b class="mono">—</b></div>
+          <div class="inv-line"><span>Multiplicative inverse of determinant:</span><b class="mono">—</b></div>
+          <div class="inv-matrix">
+            <span class="inv-label">Inverse Key Matrix:</span>
+            <div class="mview mini" id="inverseMatrix"><div class="mgrid"><span class="mval muted">—</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="keyAlert" class="alert" role="alert" hidden></div>
+  </section>
+
+  <!-- ================= PANELS ================= -->
+  <div class="panels">
+
+    <!-- ---------- ENCRYPTION PANEL ---------- -->
+    <section class="card panel enc" id="encPanel">
+      <div class="card-head">
+        <h2><span class="idx">02</span> Encryption</h2>
+        <span class="formula-chip">C = K × P mod 26</span>
+      </div>
+
+      <label class="field-label" for="plaintext">Enter Plaintext</label>
+      <textarea id="plaintext" rows="4" spellcheck="false" placeholder="Type any alphabetic message — lowercase is converted to uppercase automatically...">HELLOWORLD</textarea>
+      <div id="plainAlert" class="alert" role="alert" hidden></div>
+
+      <div class="preview">
+        <div class="preview-row"><span>Original Plaintext</span><code id="origPlain">—</code></div>
+        <div class="preview-row"><span>Processed Plaintext</span><code id="procPlain">—</code></div>
+        <div class="preview-row"><span>Padded Plaintext</span><code id="padPlain">—</code></div>
+        <div class="preview-row"><span>Blocks (n = <b id="blockN">2</b>)</span><code id="plainBlocks">—</code></div>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn primary" id="encryptBtn">Encrypt ▶</button>
+      </div>
+
+      <div class="result-box enc-result" aria-live="polite">
+        <span class="result-label">Ciphertext</span>
+        <div class="result-value mono" id="cipherOut">—</div>
+        <span class="result-note" id="cipherNote">Run the encryption to generate the ciphertext</span>
+      </div>
+
+      <h3 class="mini-title">Visualization Flow</h3>
+      <div class="flow" id="encFlow"></div>
+
+      <h3 class="mini-title">Step-by-Step Encryption</h3>
+      <div class="steps" id="encSteps"></div>
+    </section>
+
+    <!-- ---------- DECRYPTION PANEL ---------- -->
+    <section class="card panel dec" id="decPanel">
+      <div class="card-head">
+        <h2><span class="idx">03</span> Decrypt Ciphertext</h2>
+        <span class="formula-chip">P = K⁻¹ × C mod 26</span>
+      </div>
+
+      <label class="field-label" for="ciphertext">Enter Ciphertext</label>
+      <input type="text" id="ciphertext" spellcheck="false" autocomplete="off" placeholder="e.g. TC  ·  XGNQPKVZCRRLLFIJ" />
+      <div id="cipherAlert" class="alert" role="alert" hidden></div>
+
+      <div class="inverse-summary" id="decInverse"></div>
+
+      <div class="btn-row">
+        <button type="button" class="btn primary" id="decryptBtn">Decrypt ▶</button>
+      </div>
+
+      <div class="result-box dec-result" aria-live="polite">
+        <span class="result-label">Recovered Plaintext</span>
+        <div class="result-value mono" id="plainOut">—</div>
+        <span class="result-note" id="plainNote">Run the decryption to recover the plaintext</span>
+      </div>
+
+      <h3 class="mini-title">Visualization Flow</h3>
+      <div class="flow" id="decFlow"></div>
+
+      <h3 class="mini-title">Step-by-Step Decryption</h3>
+      <div class="steps" id="decSteps"></div>
+    </section>
+  </div>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="footer">
+  <strong>Hill Cipher Cryptography Dashboard</strong>
+  <span>Matrix-Based Encryption &amp; Decryption</span>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
